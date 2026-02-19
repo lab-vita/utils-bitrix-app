@@ -55,8 +55,11 @@ class Bitrix24Client:
         Обновляет токены новыми данными авторизации.
         """
 
-        if 'expires_in' in auth_data and 'expires' not in auth_data:
-            auth_data['expires'] = int(time.time()) + int(auth_data['expires_in'])
+        # Список ключей, которые нужно сохранить
+        needed_keys = ["access_token", "refresh_token", "client_endpoint", "expires"]
 
-        self._tokens.update(auth_data)
+        # Фильтруем входящий словарь, оставляя только нужные ключи
+        filtered_data = {key: auth_data.get(key) for key in needed_keys}
+
+        self._tokens.update(filtered_data)
         self._save_tokens()
