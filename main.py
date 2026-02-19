@@ -18,21 +18,19 @@ app = Flask(__name__)
 bx_client = Bitrix24Client(CLIENT_ID, CLIENT_SECRET)
 
 
-def setup_logger():
-    logger = logging.getLogger("app")
-    logger.setLevel(logging.INFO)
-    if ENV != "PRODUCTION":
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            "[%(asctime)s] %(levelname)s — %(message)s"
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+def build_logger() -> logging.Logger:
+    app_logger = logging.getLogger("app")
+    app_logger.setLevel(logging.DEBUG if ENV != "PRODUCTION" else logging.INFO)
 
-    return logger
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        logging.Formatter("[%(asctime)s] %(levelname)-8s %(name)s — %(message)s")
+    )
+    app_logger.addHandler(handler)
+    return app_logger
 
 
-logger = setup_logger()
+logger = build_logger()
 
 
 @app.route("/install", methods=["POST"])
