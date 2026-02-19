@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  bitrix24-app:
+    build: .
+    container_name: utils-bitrix-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${PORT}:${PORT}"
+    volumes:
+      - bitrix24-tokens:/app/data
+    command: python main.py
+
+volumes:
+  bitrix24-tokens:
