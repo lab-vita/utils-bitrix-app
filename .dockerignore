@@ -1,0 +1,22 @@
+# Python кэш и временные файлы
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Виртуальные окружения
+venv/
+env/
+*.env
+
+# Git и системы контроля версий
+.git/
+.gitignore
+
+# Логи и временные файлы
+*.log
+*.tmp
+*.swp
+
+# IDE
+.idea/
