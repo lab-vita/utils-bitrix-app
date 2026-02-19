@@ -8,10 +8,11 @@ from lib.bitrix24_client import Bitrix24Client
 
 load_dotenv()
 
-CLIENT_ID = os.getenv("BITRIX24_CLIENT_ID")
-CLIENT_SECRET = os.getenv("BITRIX24_CLIENT_SECRET")
-ENV = os.getenv("ENV")
-PORT = int(os.getenv("PORT"))
+CLIENT_ID = os.environ.get("BITRIX24_CLIENT_ID")
+CLIENT_SECRET = os.environ.get("BITRIX24_CLIENT_SECRET")
+ENV = os.environ.get("ENV")
+PORT = int(os.environ.get("PORT"))
+APP_URL = os.environ.get("APP_URL")
 
 app = Flask(__name__)
 bx_client = Bitrix24Client(CLIENT_ID, CLIENT_SECRET)
