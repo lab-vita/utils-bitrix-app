@@ -1,5 +1,6 @@
 import json
 import time
+import requests
 from pathlib import Path
 from typing import Any, Dict
 
@@ -14,7 +15,7 @@ class Bitrix24Client:
 
     def __init__(self, client_id: str, client_secret: str, tokens_file: str = 'utils_bitrix_app_tokens.json'):
         """
-        Инициализация клиента.
+        Инициализация клиента
 
         :param client_id: OAuth client_id приложения Bitrix24
         :param client_secret: OAuth client_secret приложения Bitrix24
@@ -28,7 +29,7 @@ class Bitrix24Client:
 
     def _load_tokens(self) -> Dict[str, Any]:
         """
-        Загружает токены из файла.
+        Загружает токены из файла
 
         :return: Словарь с токенами или пустой словарь, если файл отсутствует или повреждён
         """
@@ -44,7 +45,7 @@ class Bitrix24Client:
 
     def _save_tokens(self):
         """
-        Сохраняет текущие токены в JSON-файл. Файл перезаписывается полностью.
+        Сохраняет текущие токены в JSON-файл. Файл перезаписывается полностью
         """
 
         with self.settings_file.open("w", encoding="utf-8") as file:
@@ -52,7 +53,7 @@ class Bitrix24Client:
 
     def set_tokens(self, auth_data: Dict[str, Any]):
         """
-        Обновляет токены новыми данными авторизации.
+        Обновляет токены новыми данными авторизации
         """
 
         # Список ключей, которые нужно сохранить
@@ -63,3 +64,28 @@ class Bitrix24Client:
 
         self._tokens.update(filtered_data)
         self._save_tokens()
+
+    def _refresh_access_token(self):
+        """
+        Обновляет access_token, используя refresh_token
+        """
+
+        if not self._tokens.get("refresh_token"):
+            raise ValueError("Отсутствует refresh_token. Требуется повторная авторизация.")
+
+        params = {
+            "grant_type": "refresh_token",
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "refresh_token": self._tokens.get("refresh_token"),
+        }
+
+        try:
+            response = requests.get(self.OAUTH_URL, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            # Сохраняем новые токены
+            self.set_tokens(data)
+        except requests.exceptions.RequestException as error:
+            raise ConnectionError(f"Ошибка при обновлении токена: {error}")
