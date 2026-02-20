@@ -89,3 +89,45 @@ class Bitrix24Client:
             self.set_tokens(data)
         except requests.exceptions.RequestException as error:
             raise ConnectionError(f"Ошибка при обновлении токена: {error}")
+
+    def call(self, method: str, params: Dict[str, Any] = None):
+        """
+        Выполняет вызов метода API Bitrix24
+
+        :param method: Метод API (например, 'crm.lead.list')
+        :param params: Параметры запроса (словарь)
+        :return: Результат выполнения запроса (содержимое поля 'result')
+        """
+
+        # Проверка наличия базовых данных
+        if not self._tokens or not self._tokens.get("client_endpoint"):
+            raise ValueError("Клиент не инициализирован: отсутствует endpoint или токены.")
+
+        # Проверка и обновление токена (запас 3 минуты = 180 секунд)
+        # Если текущее время + 180 сек больше времени истечения токена -> обновляем
+        if time.time() + 180 >= self._tokens.get("expires"):
+            self._refresh_access_token()
+
+        # Формирование URL
+        url = f"{self._tokens.get('client_endpoint')}{method}"
+
+        # Подготовка параметров
+        if params is None:
+            params = {}
+
+        # Добавляем access_token в параметры
+        params["auth"] = self._tokens.get("access_token")
+
+        try:
+            response = requests.post(url, json=params)
+            response.raise_for_status()
+            data = response.json()
+
+            if "error" in data:
+                error_code = data.get("error")
+                error_message = data.get("error_description")
+                raise Exception(f"Ошибка API Bitrix [{error_code}]: {error_message}")
+
+            return data.get("result")
+        except requests.exceptions.RequestException as error:
+            raise ConnectionError(f"Ошибка сетевого запроса: {error}")
