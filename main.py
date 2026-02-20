@@ -35,8 +35,6 @@ logger = build_logger()
 
 
 def register_activity():
-<<<<<<< Updated upstream
-=======
     """
     Регистрирует активити Сумма прописью в бизнес-процессах Bitrix24
     """
@@ -76,72 +74,34 @@ def register_activity():
 
 @app.route("/install", methods=["POST"])
 def install():
->>>>>>> Stashed changes
     """
-    Регистрирует активити Сумма прописью в бизнес-процессах Bitrix24
+    Endpoint для обработки установки приложения Bitrix24
     """
 
-    bx_client.call("bizproc.activity.add", {
-        "CODE": "utils-bitrix-app.amount2words",
-        "HANDLER": f"{APP_URL}/amount2words-handler",
-        "USE_SUBSCRIPTION": "Y",
-        "NAME": "Сумма прописью",
-        "DESCRIPTION": "Преобразует число в текстовое представление суммы",
-        "PROPERTIES": {
-            "SOURCE_AMOUNT": {
-                "NAME": "Исходная сумма",
-                "DESCRIPTION": "Укажите код поля с исходной суммой (UF_CRM_***)",
-                "TYPE": "string",
-                "REQUIRED": "Y",
-                "MULTIPLE": "N",
-                "DEFAULT": ""
-            },
-            "RESULT": {
-                "NAME": "Сумма прописью",
-                "DESCRIPTION": "Укажите код поля для суммы прописью (UF_CRM_***)",
-                "TYPE": "string",
-                "REQUIRED": "Y",
-                "MULTIPLE": "N",
-                "DEFAULT": ""
-            }
-        },
-        "RETURN_PROPERTIES": {
-            "STATUS": {
-                'NAME': 'Статус операции',
-                'TYPE': 'string'
-            }
-        }
-    })
+    try:
+        # Bitrix присылает вложенные ключи — приводим к нормальной структуре
+        data = parse_nested(request.form.to_dict())
+    except Exception as error:
+        logger.exception("Ошибка парсинга form-data при установке: %s", error)
+        return jsonify({"error": "bad_request"}), HTTPStatus.BAD_REQUEST
 
-    @app.route("/install", methods=["POST"])
-    def install():
-        """
-        Endpoint для обработки установки приложения Bitrix24
-        """
+    # Проверяем тип события
+    if (event := data.get("event")) != "ONAPPINSTALL":
+        logger.warning("Неожиданное событие: %s", event)
+        return jsonify({"error": "unexpected_event", "event": event}), HTTPStatus.BAD_REQUEST
 
-        try:
-            # Bitrix присылает вложенные ключи — приводим к нормальной структуре
-            data = parse_nested(request.form.to_dict())
-        except Exception as error:
-            logger.exception("Ошибка парсинга form-data при установке: %s", error)
-            return jsonify({"error": "bad_request"}), HTTPStatus.BAD_REQUEST
+    auth_data = data.get("auth") or {}
+    if not auth_data:
+        logger.error("Отсутствуют auth-данные в запросе установки")
+        return jsonify({"error": "missing_auth"}), HTTPStatus.BAD_REQUEST
 
-        # Проверяем тип события
-        if (event := data.get("event")) != "ONAPPINSTALL":
-            logger.warning("Неожиданное событие: %s", event)
-            return jsonify({"error": "unexpected_event", "event": event}), HTTPStatus.BAD_REQUEST
+    # Сохраняем токены Bitrix24
+    bx_client.set_tokens(auth_data)
+    logger.info("Токены сохранены. Портал: %s", auth_data.get("domain"))
 
-        auth_data = data.get("auth") or {}
-        if not auth_data:
-            logger.error("Отсутствуют auth-данные в запросе установки")
-            return jsonify({"error": "missing_auth"}), HTTPStatus.BAD_REQUEST
+    return "", HTTPStatus.OK
 
-        # Сохраняем токены Bitrix24
-        bx_client.set_tokens(auth_data)
-        logger.info("Токены сохранены. Портал: %s", auth_data.get("domain"))
 
-        return "", HTTPStatus.OK
-
-    if __name__ == "__main__":
-        logger.info(f"Запуск сервера в среде: {ENV}")
-        app.run(host="0.0.0.0", port=PORT, debug=(ENV != "PRODUCTION"))
+if __name__ == "__main__":
+    logger.info(f"Запуск сервера в среде: {ENV}")
+    app.run(host="0.0.0.0", port=PORT, debug=(ENV != "PRODUCTION"))
