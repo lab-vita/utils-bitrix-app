@@ -35,6 +35,48 @@ logger = build_logger()
 
 
 def register_activity():
+<<<<<<< Updated upstream
+=======
+    """
+    Регистрирует активити Сумма прописью в бизнес-процессах Bitrix24
+    """
+
+    bx_client.call("bizproc.activity.add", {
+        "CODE": "utils-bitrix-app.amount2words",
+        "HANDLER": f"{APP_URL}/amount2words-handler",
+        "USE_SUBSCRIPTION": "Y",
+        "NAME": "Сумма прописью",
+        "DESCRIPTION": "Преобразует число в текстовое представление суммы",
+        "PROPERTIES": {
+            "SOURCE_AMOUNT": {
+                "NAME": "Исходная сумма",
+                "DESCRIPTION": "Укажите код поля с исходной суммой (UF_CRM_***)",
+                "TYPE": "string",
+                "REQUIRED": "Y",
+                "MULTIPLE": "N",
+                "DEFAULT": ""
+            },
+            "RESULT": {
+                "NAME": "Сумма прописью",
+                "DESCRIPTION": "Укажите код поля для суммы прописью (UF_CRM_***)",
+                "TYPE": "string",
+                "REQUIRED": "Y",
+                "MULTIPLE": "N",
+                "DEFAULT": ""
+            }
+        },
+        "RETURN_PROPERTIES": {
+            "STATUS": {
+                'NAME': 'Статус операции',
+                'TYPE': 'string'
+            }
+        }
+    })
+
+
+@app.route("/install", methods=["POST"])
+def install():
+>>>>>>> Stashed changes
     """
     Регистрирует активити Сумма прописью в бизнес-процессах Bitrix24
     """
