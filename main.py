@@ -99,6 +99,12 @@ def install():
     bx_client.set_tokens(auth_data)
     logger.info("Токены сохранены. Портал: %s", auth_data.get("domain"))
 
+    try:
+        register_activity()
+        logger.info("Активити 'amount2words' успешно зарегистрирована")
+    except Exception as error:
+        logger.exception("Ошибка регистрации активити: %s", error)
+
     return "", HTTPStatus.OK
 
 
