@@ -1,6 +1,7 @@
 import os
 import logging
 from flask import Flask, request, jsonify
+from http import HTTPStatus
 from dotenv import load_dotenv
 
 from lib.utils import parse_nested
@@ -43,25 +44,24 @@ def install():
         # Bitrix присылает вложенные ключи — приводим к нормальной структуре
         data = parse_nested(request.form.to_dict())
     except Exception as error:
-        logger.error(f"Ошибка парсинга form-data: {error}")
-        return jsonify({"error": "bad_request"}), 400
+        logger.exception("Ошибка парсинга form-data при установке: %s", error)
+        return jsonify({"error": "bad_request"}), HTTPStatus.BAD_REQUEST
 
     # Проверяем тип события
-    event = data.get("event")
-    if event != "ONAPPINSTALL":
-        logger.warning(f"Неожиданное событие: {event}")
-        return jsonify({"error": "unexpected_event", "event": event}), 400
+    if (event := data.get("event")) != "ONAPPINSTALL":
+        logger.warning("Неожиданное событие: %s", event)
+        return jsonify({"error": "unexpected_event", "event": event}), HTTPStatus.BAD_REQUEST
 
-    auth_data = data.get("auth", {})
+    auth_data = data.get("auth") or {}
     if not auth_data:
-        logger.error("Отсутствуют auth данные")
-        return jsonify({"error": "missing_auth"}), 400
+        logger.error("Отсутствуют auth-данные в запросе установки")
+        return jsonify({"error": "missing_auth"}), HTTPStatus.BAD_REQUEST
 
     # Сохраняем токены Bitrix24
     bx_client.set_tokens(auth_data)
+    logger.info("Токены сохранены. Портал: %s", auth_data.get("domain"))
 
-    logger.info(f"Приложение установлено. Портал: {auth_data.get('domain')}")
-    return "", 200
+    return "", HTTPStatus.OK
 
 
 if __name__ == "__main__":
