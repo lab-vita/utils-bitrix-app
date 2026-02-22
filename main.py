@@ -39,37 +39,48 @@ def register_activity():
     Регистрирует активити Сумма прописью в бизнес-процессах Bitrix24
     """
 
-    bx_client.call("bizproc.activity.add", {
-        "CODE": "utils-bitrix-app.amount2words",
-        "HANDLER": f"{APP_URL}/amount2words-handler",
-        "USE_SUBSCRIPTION": "Y",
-        "NAME": "Сумма прописью",
-        "DESCRIPTION": "Преобразует число в текстовое представление суммы",
-        "PROPERTIES": {
-            "SOURCE_AMOUNT": {
-                "NAME": "Исходная сумма",
-                "DESCRIPTION": "Укажите код поля с исходной суммой (UF_CRM_***)",
-                "TYPE": "string",
-                "REQUIRED": "Y",
-                "MULTIPLE": "N",
-                "DEFAULT": ""
+    try:
+        bx_client.call("bizproc.activity.add", {
+            "CODE": "utils-bitrix-app.amount2words",
+            "HANDLER": f"{APP_URL}/amount2words-handler",
+            "USE_SUBSCRIPTION": "Y",
+            "NAME": "Сумма прописью",
+            "DESCRIPTION": "Преобразует число в текстовое представление суммы",
+            "PROPERTIES": {
+                "SOURCE_AMOUNT": {
+                    "NAME": "Исходная сумма",
+                    "DESCRIPTION": "Укажите код поля с исходной суммой (UF_CRM_***)",
+                    "TYPE": "string",
+                    "REQUIRED": "Y",
+                    "MULTIPLE": "N",
+                    "DEFAULT": ""
+                },
+                "RESULT": {
+                    "NAME": "Сумма прописью",
+                    "DESCRIPTION": "Укажите код поля для суммы прописью (UF_CRM_***)",
+                    "TYPE": "string",
+                    "REQUIRED": "Y",
+                    "MULTIPLE": "N",
+                    "DEFAULT": ""
+                }
             },
-            "RESULT": {
-                "NAME": "Сумма прописью",
-                "DESCRIPTION": "Укажите код поля для суммы прописью (UF_CRM_***)",
-                "TYPE": "string",
-                "REQUIRED": "Y",
-                "MULTIPLE": "N",
-                "DEFAULT": ""
+            "RETURN_PROPERTIES": {
+                "ERROR": {
+                    "NAME": "Ошибка",
+                    "TYPE": "string",
+                },
+                "STATUS": {
+                    "NAME": "Статус операции",
+                    "TYPE": "string"
+                }
             }
-        },
-        "RETURN_PROPERTIES": {
-            "STATUS": {
-                'NAME': 'Статус операции',
-                'TYPE': 'string'
-            }
-        }
-    })
+        })
+    except Exception as exc:
+        # Активити уже зарегистрирована — нормальная ситуация при переустановке
+        if "ERROR_ACTIVITY_ALREADY_INSTALLED" in str(exc):
+            logger.info("Активити 'Сумма прописью' уже зарегистрирована, пропускаем")
+            return
+        raise
 
 
 @app.route("/install", methods=["POST"])
