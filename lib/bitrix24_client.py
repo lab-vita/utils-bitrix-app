@@ -105,7 +105,7 @@ class Bitrix24Client:
 
         # Проверка и обновление токена (запас 3 минуты = 180 секунд)
         # Если текущее время + 180 сек больше времени истечения токена -> обновляем
-        if time.time() + 180 >= self._tokens.get("expires"):
+        if time.time() + 180 >= float(self._tokens.get("expires")):
             self._refresh_access_token()
 
         # Формирование URL
