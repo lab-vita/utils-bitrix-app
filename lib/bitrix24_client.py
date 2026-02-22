@@ -109,7 +109,7 @@ class Bitrix24Client:
             self._refresh_access_token()
 
         # Формирование URL
-        url = f"{self._tokens.get('client_endpoint')}{method}"
+        url = f"{self._tokens.get('client_endpoint')}{method}.json"
 
         # Подготовка параметров
         if params is None:
