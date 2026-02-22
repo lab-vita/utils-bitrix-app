@@ -1,4 +1,4 @@
-from morph import morph
+from .morph import morph
 
 
 class Amount2Words:
