@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 from lib.utils import parse_nested
 from lib.bitrix24_client import Bitrix24Client
+from amount2words.amount2words import Amount2Words
 
 load_dotenv()
 
@@ -17,6 +18,7 @@ APP_URL = os.environ.get("APP_URL")
 
 app = Flask(__name__)
 bx_client = Bitrix24Client(CLIENT_ID, CLIENT_SECRET)
+converter = Amount2Words()
 
 
 def build_logger() -> logging.Logger:
@@ -83,6 +85,38 @@ def register_activity():
         raise
 
 
+def send_bizproc_event(event_token: str, error_msg: str = "", status_msg: str = "ok"):
+    """
+    Завершает активити бизнес-процесса через bizproc.event.send
+    """
+
+    try:
+        bx_client.call("bizproc.event.send", {
+            "event_token": event_token,
+            "return_values": {"ERROR": error_msg, "STATUS": status_msg},
+        })
+    except Exception as error:
+        logger.exception("Ошибка API при отправке bizproc.event.send:", error)
+
+
+def update_crm_field(deal_id: str, field: str, value: str):
+    """
+    Обновляет поле CRM-сущности
+    """
+
+    try:
+        bx_client.call("crm.deal.update", {
+            "id": deal_id,
+            "fields": {
+                field: value
+            }
+        })
+
+        logger.info("Поле %s обновлено: → %s", field, value)
+    except Exception as error:
+        logger.exception("Ошибка API при обновлении: %s", error)
+
+
 @app.route("/install", methods=["POST"])
 def install():
     """
@@ -115,6 +149,59 @@ def install():
         logger.info("Активити 'amount2words' успешно зарегистрирована")
     except Exception as error:
         logger.exception("Ошибка регистрации активити: %s", error)
+
+    return "", HTTPStatus.OK
+
+
+@app.route("/amount2words-handler", methods=["POST"])
+def amount2words_handler():
+    """
+    Обработчик активити Сумма прописью бизнес-процесса
+    """
+
+    try:
+        data = parse_nested(request.form.to_dict())
+    except Exception as error:
+        logger.exception("Ошибка парсинга form-data в обработчике активити: %s", error)
+        return jsonify({"error": "bad_request"}), HTTPStatus.BAD_REQUEST
+
+    event_token = data.get("event_token")
+    if not event_token:
+        logger.error("Отсутствует event_token — невозможно завершить активити")
+        return jsonify({"error": "missing_event_token"}), HTTPStatus.BAD_REQUEST
+
+    properties = data.get("properties") or {}
+    source_amount = properties.get("SOURCE_AMOUNT")
+
+    if source_amount == "":
+        source_amount = "0"
+    else:
+        source_amount = str(source_amount).split("|")[0]
+
+    try:
+        amount_in_words = converter.convert(source_amount)
+        logger.info("Конвертация: %s → %s", source_amount, amount_in_words)
+    except Exception as error:
+        logger.exception("Ошибка конвертации суммы '%s': %s", source_amount, error)
+        send_bizproc_event(event_token, error_msg="Ошибка конвертации суммы", status_msg="error")
+        return "", HTTPStatus.OK
+
+    result_field = properties.get("RESULT")
+    document_id = data.get("document_id")
+    deal_raw = document_id.get("2")
+
+    if deal_raw.startswith("DEAL_"):
+        deal_id = deal_raw.split("_")[1]
+    else:
+        deal_id = None
+
+    try:
+        update_crm_field(deal_id, result_field, amount_in_words)
+        send_bizproc_event(event_token, error_msg="", status_msg="ok")
+    except Exception as error:
+        logger.exception("Ошибка обновления поля суммы: %s", error)
+        send_bizproc_event(event_token, error_msg="Ошибка обновления поля суммы", status_msg="error")
+        return "", HTTPStatus.OK
 
     return "", HTTPStatus.OK
 
